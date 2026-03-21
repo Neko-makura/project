@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>deskcat - powerful office system</title>
+<style>
+  /* ===== ベース ===== */
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+    background-color: #f5f5f7;
+    color: #1c1c1e;
+    scroll-behavior: smooth;
+  }
+  a { text-decoration: none; }
+
+  /* ===== ヘッダー ===== */
+  header {
+    background-color: #000;
+    color: #fff;
+    padding: 20px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { margin: 0; font-size: 1.8rem; }
+  nav a { color: #fff; margin-left: 25px; font-weight: 500; transition: 0.2s; }
+  nav a:hover { color: #50e3c2; }
+
+  /* ===== ヒーロー ===== */
+  .hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+    background: url('https://source.unsplash.com/1600x900/?technology') center/cover no-repeat;
+    position: relative;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0,0,0,0.5);
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 700px; }
+  .hero h2 { font-size: 3rem; margin-bottom: 20px; }
+  .hero p { font-size: 1.3rem; margin-bottom: 40px; }
+  .hero a {
+    background-color: #50e3c2;
+    color: #000;
+    padding: 15px 40px;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  .hero a:hover { background-color: #3bb89f; color: #fff; }
+
+  /* ===== セクション ===== */
+  section { padding: 80px 20px; max-width: 1200px; margin: 0 auto; }
+
+  section h3 { font-size: 2.5rem; text-align: center; margin-bottom: 50px; }
+
+  /* ===== 機能カード ===== */
+  .features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+  }
+  .feature {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    flex: 1 1 280px;
+    max-width: 320px;
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .feature:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+  .feature h4 { font-size: 1.6rem; margin-bottom: 15px; }
+  .feature p { font-size: 1rem; color: #555; }
+
+  /* ===== ギャラリー ===== */
+  .gallery {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 20px;
+  }
+  .gallery img {
+    border-radius: 16px;
+    width: 300px;
+    flex-shrink: 0;
+    transition: transform 0.3s;
+  }
+  .gallery img:hover { transform: scale(1.05); }
+
+  /* ===== 導入事例 ===== */
+  .testimonials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+  }
+  .testimonial {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 350px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .testimonial p { font-size: 1rem; color: #555; margin-bottom: 15px; }
+  .testimonial h5 { font-weight: bold; color: #1c1c1e; }
+
+  /* ===== ダウンロードセクション ===== */
+  .download a {
+    background-color: #000;
+    color: #fff;
+    padding: 15px 40px;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  .download a:hover { background-color: #333; }
+
+  /* ===== フッター ===== */
+  footer {
+    text-align: center;
+    padding: 60px 20px;
+    background-color: #1c1c1e;
+    color: #fff;
+  }
+  footer a { color: #50e3c2; margin: 0 10px; font-weight: 500; }
+
+  /* ===== メディア ===== */
+  @media (max-width: 768px) {
+    .features, .testimonials { flex-direction: column; align-items: center; }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MyProgram</h1>
+  <nav>
+    <a href="#about">概要</a>
+    <a href="#features">機能</a>
+    <a href="#gallery">ギャラリー</a>
+    <a href="#testimonials">導入事例</a>
+    <a href="#download">ダウンロード</a>
+    <a href="#github">GitHub</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-content">
+    <h2>未来の開発体験を、あなたに。</h2>
+    <p>GitHubのオープンさとAppleの洗練を融合した次世代プログラム。</p>
+    <a href="#download">今すぐ試す</a>
+  </div>
+</section>
+
+<section id="about">
+  <h3>概要</h3>
+  <p style="text-align:center; max-width:800px; margin:auto;">
+    MyProgramは開発者向けに設計された革新的なツールです。オープンで自由なコラボレーションを可能にしつつ、ユーザーにとって直感的で美しい操作体験を提供します。
+  </p>
+</section>
+
+<section id="features">
+  <h3>主な機能</h3>
+  <div class="features">
+    <div class="feature">
+      <h4>高速パフォーマンス</h4>
+      <p>軽量で効率的な設計により、大規模プロジェクトでも快適に動作します。</p>
+    </div>
+    <div class="feature">
+      <h4>直感的UI</h4>
+      <p>複雑な操作もシンプルに。誰でも迷わず使えるデザイン。</p>
+    </div>
+    <div class="feature">
+      <h4>GitHub連携</h4>
+      <p>リポジトリとの同期やバージョン管理をスムーズに実行できます。</p>
+    </div>
+    <div class="feature">
+      <h4>マルチプラットフォーム対応</h4>
+      <p>Mac、Windows、Linuxすべてでネイティブ体験を提供します。</p>
+    </div>
+  </div>
+</section>
+
+<section id="gallery">
+  <h3>スクリーンショット</h3>
+  <div class="gallery">
+    <img src="https://source.unsplash.com/300x200/?code" alt="スクリーンショット1">
+    <img src="https://source.unsplash.com/300x200/?app" alt="スクリーンショット2">
+    <img src="https://source.unsplash.com/300x200/?programming" alt="スクリーンショット3">
+    <img src="https://source.unsplash.com/300x200/?technology" alt="スクリーンショット4">
+  </div>
+</section>
+
+<section id="testimonials">
+  <h3>導入事例</h3>
+  <div class="testimonials">
+    <div class="testimonial">
+      <p>「MyProgramを使ってから開発効率が2倍になりました！」</p>
+      <h5>- 株式会社テックワールド</h5>
+    </div>
+    <div class="testimonial">
+      <p>「UIが美しく、チームメンバーもすぐに慣れました。」</p>
+      <h5>- 株式会社イノベート</h5>
+    </div>
+    <div class="testimonial">
+      <p>「GitHubとの連携が便利で、バージョン管理が楽になりました。」</p>
+      <h5>- フリーランスエンジニア A.K.</h5>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <h3>ダウンロード</h3>
+  <p style="text-align:center; max-width:800px; margin:auto;">
+    各プラットフォームに対応したインストーラーを提供しています。すぐに導入して体験を始めましょう。
+  </p>
+  <div style="text-align:center; margin-top:30px;" class="download">
+    <a href="#">Mac版ダウンロード</a>
+    <a href="#" style="margin-left:20px;">Windows版ダウンロード</a>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2026 MyProgram</p>
+  <a href="#">GitHub</a> | 
+  <a href="#">Twitter</a> | 
+  <a href="#">LinkedIn</a>
+</footer>
+
+</body>
+</html>
