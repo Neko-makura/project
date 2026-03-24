@@ -68,7 +68,7 @@ async function runGPU(resultEl) {
     const adapter = await navigator.gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const SIZE = 1024 * 1024 * 4; // 要素数（増やすと負荷UP）
+    const SIZE = 1024 * 1024 * 1024; // 要素数（増やすと負荷UP）
     const ITER = 100;
 
     const buffer = device.createBuffer({
