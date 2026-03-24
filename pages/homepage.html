@@ -2,146 +2,216 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Float32 Benchmark (CPU / WebGPU)</title>
+<title>WebGPU Benchmark UI</title>
+<style>
+body {
+  font-family: sans-serif;
+  background: #111;
+  color: #eee;
+  padding: 20px;
+}
+.panel {
+  background: #1e1e1e;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+}
+progress {
+  width: 100%;
+  height: 20px;
+}
+#chart {
+  width: 100%;
+  height: 200px;
+  background: #222;
+}
+</style>
 </head>
 <body>
 
-<h1>Float32 ベンチマーク</h1>
+<h1>Float32 Benchmark</h1>
 
-<label>
-  <input type="checkbox" id="useGPU"> WebGPUを使用
-</label>
-<br><br>
+<div class="panel">
+  <label>
+    <input type="checkbox" id="useGPU"> WebGPU使用
+  </label>
+  <br><br>
+  <button onclick="start()">実行</button>
+</div>
 
-<button onclick="run()">実行</button>
-<pre id="result"></pre>
+<div class="panel">
+  <div>進行状況</div>
+  <progress id="progress" value="0" max="100"></progress>
+</div>
+
+<div class="panel">
+  <pre id="log"></pre>
+</div>
+
+<div class="panel">
+  <canvas id="chart"></canvas>
+</div>
 
 <script>
-async function run() {
-    const useGPU = document.getElementById("useGPU").checked;
-    const resultEl = document.getElementById("result");
+const logEl = document.getElementById("log");
+const progressEl = document.getElementById("progress");
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
 
-    if (useGPU) {
-        if (!navigator.gpu) {
-            resultEl.textContent = "WebGPU非対応ブラウザ";
-            return;
-        }
-        await runGPU(resultEl);
-    } else {
-        runCPU(resultEl);
-    }
+canvas.width = canvas.clientWidth;
+canvas.height = canvas.clientHeight;
+
+let history = [];
+
+function log(msg) {
+  logEl.textContent += msg + "\n";
 }
 
-// ================= CPU =================
-function runCPU(resultEl) {
-    const ITER = 50_000_000;
+// ===== グラフ描画 =====
+function drawChart() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    let a = Math.fround(1.1);
-    let b = Math.fround(2.2);
-    let c = Math.fround(0.0);
+  const max = Math.max(...history, 1);
 
-    // warmup
-    for (let i = 0; i < 1_000_000; i++) {
-        c = Math.fround(a * b + c);
-    }
-
-    const start = performance.now();
-
-    for (let i = 0; i < ITER; i++) {
-        c = Math.fround(a * b + c);
-        a = Math.fround(a + 0.000001);
-        b = Math.fround(b + 0.000002);
-    }
-
-    const end = performance.now();
-    const time = (end - start) / 1000;
-
-    const flops = ITER * 2;
-    const gflops = flops / time / 1e9;
-
-    resultEl.textContent =
-        `[CPU]\n時間: ${time.toFixed(3)} 秒\nGFLOPS: ${gflops.toFixed(3)}\n結果: ${c}`;
+  history.forEach((v, i) => {
+    const x = i * 30;
+    const h = (v / max) * canvas.height;
+    ctx.fillRect(x, canvas.height - h, 20, h);
+  });
 }
 
-// ================= GPU =================
-async function runGPU(resultEl) {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
+// ===== メイン =====
+async function start() {
+  logEl.textContent = "";
+  progressEl.value = 0;
 
-    const SIZE = 1024 * 1024 * 1024; // 要素数（増やすと負荷UP）
-    const ITER = 100;
+  const useGPU = document.getElementById("useGPU").checked;
 
-    const buffer = device.createBuffer({
-        size: SIZE * 4,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
-    });
+  log(useGPU ? "[GPUモード]" : "[CPUモード]");
 
-    const shader = `
-        @group(0) @binding(0)
-        var<storage, read_write> data: array<f32>;
+  if (useGPU) {
+    await runGPU();
+  } else {
+    await runCPU();
+  }
+}
 
-        @compute @workgroup_size(256)
-        fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-            let i = id.x;
-            if (i >= arrayLength(&data)) { return; }
+// ===== CPU =====
+async function runCPU() {
+  const ITER = 30_000_000;
 
-            var a = f32(i) * 0.001;
-            var b = 2.0;
-            var c = 0.0;
+  let a = Math.fround(1.1);
+  let b = Math.fround(2.2);
+  let c = Math.fround(0);
 
-            for (var j = 0u; j < ${ITER}u; j++) {
-                c = a * b + c;
-                a = a + 0.000001;
-                b = b + 0.000002;
-            }
+  const start = performance.now();
 
-            data[i] = c;
+  for (let i = 0; i < ITER; i++) {
+    c = Math.fround(a * b + c);
+
+    if (i % 1_000_000 === 0) {
+      progressEl.value = (i / ITER) * 100;
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  const end = performance.now();
+
+  const time = (end - start) / 1000;
+  const gflops = (ITER * 2) / time / 1e9;
+
+  log(`時間: ${time.toFixed(3)} 秒`);
+  log(`GFLOPS: ${gflops.toFixed(3)}`);
+
+  history.push(gflops);
+  drawChart();
+}
+
+// ===== GPU =====
+async function runGPU() {
+  if (!navigator.gpu) {
+    log("WebGPU非対応");
+    return;
+  }
+
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter.requestDevice();
+
+  const SIZE = 1024 * 1024 * 2;
+  const ITER = 100;
+
+  const buffer = device.createBuffer({
+    size: SIZE * 4,
+    usage: GPUBufferUsage.STORAGE
+  });
+
+  const shader = `
+    @group(0) @binding(0)
+    var<storage, read_write> data: array<f32>;
+
+    @compute @workgroup_size(256)
+    fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+        let i = id.x;
+        if (i >= arrayLength(&data)) { return; }
+
+        var a = f32(i);
+        var b = 2.0;
+        var c = 0.0;
+
+        for (var j = 0u; j < ${ITER}u; j++) {
+            c = a * b + c;
+            a = a + 0.000001;
+            b = b + 0.000002;
         }
-    `;
 
-    const module = device.createShaderModule({ code: shader });
+        data[i] = c;
+    }
+  `;
 
-    const pipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: {
-            module: module,
-            entryPoint: "main"
-        }
-    });
+  const module = device.createShaderModule({ code: shader });
 
-    const bindGroup = device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{
-            binding: 0,
-            resource: { buffer: buffer }
-        }]
-    });
+  const pipeline = device.createComputePipeline({
+    layout: "auto",
+    compute: { module, entryPoint: "main" }
+  });
 
-    const encoder = device.createCommandEncoder();
-    const pass = encoder.beginComputePass();
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer } }]
+  });
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
+  const encoder = device.createCommandEncoder();
+  const pass = encoder.beginComputePass();
 
-    const workgroups = Math.ceil(SIZE / 256);
-    
-    const start = performance.now();
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bindGroup);
 
-    pass.dispatchWorkgroups(workgroups);
-    pass.end();
+  const workgroups = Math.ceil(SIZE / 256);
 
-    device.queue.submit([encoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
+  const start = performance.now();
 
-    const end = performance.now();
+  pass.dispatchWorkgroups(workgroups);
+  pass.end();
 
-    const time = (end - start) / 1000;
+  device.queue.submit([encoder.finish()]);
+  await device.queue.onSubmittedWorkDone();
 
-    const flops = SIZE * ITER * 2;
-    const gflops = flops / time / 1e9;
+  progressEl.value = 100;
 
-    resultEl.textContent =
-        `[WebGPU]\n時間: ${time.toFixed(3)} 秒\nGFLOPS: ${gflops.toFixed(3)}`;
+  const end = performance.now();
+
+  const time = (end - start) / 1000;
+  const gflops = (SIZE * ITER * 2) / time / 1e9;
+
+  log(`時間: ${time.toFixed(3)} 秒`);
+  log(`GFLOPS: ${gflops.toFixed(3)}`);
+
+  history.push(gflops);
+  drawChart();
 }
 </script>
 
