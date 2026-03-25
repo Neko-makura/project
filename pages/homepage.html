@@ -1,177 +1,34 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Custom Float32 Benchmark</title>
-<style>
-body { background:#111; color:#eee; font-family:sans-serif; padding:20px; }
-.panel { margin-bottom:15px; }
-input { width:120px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Alpine on v86</title>
+  <script src="https://copy.sh/v86/build/v86.js"></script>
 </head>
 <body>
+  <div id="screen"></div>
 
-<h1>カスタムベンチマーク</h1>
+  <script>
+    const emulator = new V86({
+      wasm_path: "https://copy.sh/v86/build/v86.wasm",
+      memory_size: 256 * 1024 * 1024,
 
-<div class="panel">
-  <label><input type="checkbox" id="useGPU"> WebGPU使用</label>
-</div>
+      screen_container: document.getElementById("screen"),
 
-<div class="panel">
-  <h3>CPU設定</h3>
-  ITER: <input type="number" id="cpu_iter" value="50000000"><br>
-</div>
+      bios: {
+        url: "https://copy.sh/v86/bios/seabios.bin"
+      },
 
-<div class="panel">
-  <h3>GPU設定</h3>
-  並列数 (SIZE): <input type="number" id="gpu_size" value="4194304"><br>
-  内部ループ (ITER): <input type="number" id="gpu_iter" value="200"><br>
-</div>
+      vga_bios: {
+        url: "https://copy.sh/v86/bios/vgabios.bin"
+      },
 
-<div class="panel">
-  <h3>演算密度</h3>
-  FLOP/ループ: <input type="number" id="flop_per_loop" value="8"><br>
-</div>
+      cdrom: {
+        url: "https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86/alpine-standard-3.19.0-x86.iso"
+      },
 
-<button onclick="start()">実行</button>
-
-<pre id="log"></pre>
-
-<script>
-const logEl = document.getElementById("log");
-
-function log(msg){
-  logEl.textContent += msg + "\n";
-}
-
-async function start(){
-  logEl.textContent = "";
-
-  const useGPU = document.getElementById("useGPU").checked;
-
-  const cpuIter = Number(document.getElementById("cpu_iter").value);
-  const gpuSize = Number(document.getElementById("gpu_size").value);
-  const gpuIter = Number(document.getElementById("gpu_iter").value);
-  const flopPerLoop = Number(document.getElementById("flop_per_loop").value);
-
-  log(`モード: ${useGPU ? "GPU" : "CPU"}`);
-  log(`FLOP/ループ: ${flopPerLoop}`);
-
-  if(useGPU){
-    await runGPU(gpuSize, gpuIter, flopPerLoop);
-  }else{
-    await runCPU(cpuIter, flopPerLoop);
-  }
-}
-
-// ===== CPU =====
-async function runCPU(iter, flopPerLoop){
-  let a = Math.fround(1.1);
-  let b = Math.fround(2.2);
-  let c = Math.fround(0);
-
-  const start = performance.now();
-
-  for(let i=0;i<iter;i++){
-
-    // FLOP数に応じて演算増加
-    for(let k=0;k<flopPerLoop/2;k++){
-      c = Math.fround(a*b + c);
-      a = Math.fround(a + 0.000001);
-      b = Math.fround(b + 0.000002);
-    }
-
-  }
-
-  const end = performance.now();
-  const time = (end-start)/1000;
-
-  const flops = iter * flopPerLoop;
-  const gflops = flops / time / 1e9;
-
-  log(`時間: ${time.toFixed(3)} 秒`);
-  log(`GFLOPS: ${gflops.toFixed(3)}`);
-}
-
-// ===== GPU =====
-async function runGPU(size, iter, flopPerLoop){
-  if(!navigator.gpu){
-    log("WebGPU非対応");
-    return;
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-  const device = await adapter.requestDevice();
-
-  const buffer = device.createBuffer({
-    size: size*4,
-    usage: GPUBufferUsage.STORAGE
-  });
-
-  // WGSLコード生成（動的）
-  const shader = `
-    @group(0) @binding(0)
-    var<storage, read_write> data: array<f32>;
-
-    @compute @workgroup_size(256)
-    fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-      let i = id.x;
-      if(i >= arrayLength(&data)) { return; }
-
-      var a = f32(i)*0.001;
-      var b = 2.0;
-      var c = 0.0;
-
-      for(var j=0u; j<${iter}u; j++){
-        for(var k=0u; k<${Math.floor(flopPerLoop/2)}u; k++){
-          c = a*b + c;
-          a = a + 0.000001;
-          b = b + 0.000002;
-        }
-      }
-
-      data[i] = c;
-    }
-  `;
-
-  const module = device.createShaderModule({code:shader});
-
-  const pipeline = device.createComputePipeline({
-    layout:"auto",
-    compute:{module, entryPoint:"main"}
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout:pipeline.getBindGroupLayout(0),
-    entries:[{binding:0, resource:{buffer}}]
-  });
-
-  const encoder = device.createCommandEncoder();
-  const pass = encoder.beginComputePass();
-
-  pass.setPipeline(pipeline);
-  pass.setBindGroup(0, bindGroup);
-
-  const workgroups = Math.ceil(size/256);
-
-  const start = performance.now();
-
-  pass.dispatchWorkgroups(workgroups);
-  pass.end();
-
-  device.queue.submit([encoder.finish()]);
-  await device.queue.onSubmittedWorkDone();
-
-  const end = performance.now();
-  const time = (end-start)/1000;
-
-  const flops = size * iter * flopPerLoop;
-  const gflops = flops / time / 1e9;
-
-  log(`時間: ${time.toFixed(3)} 秒`);
-  log(`GFLOPS: ${gflops.toFixed(3)}`);
-}
-</script>
-
+      autostart: true
+    });
+  </script>
 </body>
 </html>
